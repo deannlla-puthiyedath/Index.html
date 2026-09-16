@@ -388,3 +388,478 @@ setInterval(renderToday,5*60*1000);
 </script>
 </body>
 </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Della · Delivery Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;700&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EEF2EE; --card:#FFFFFF; --ink:#1F3A3D; --soft:#5B7071; --line:#D5DDD7;
+  --gold:#E8A33D; --qdc:#2F7E8C; --km:#8A5AA8; --int:#6F7D5C; --warn:#B8475A; --ok:#3F8A5A;
+  --fixed:#DCE8E6;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#142224; --card:#1C2E31; --ink:#E4EDEA; --soft:#9DB1AF; --line:#2E4447;
+    --fixed:#22393C;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#142224; --card:#1C2E31; --ink:#E4EDEA; --soft:#9DB1AF; --line:#2E4447; --fixed:#22393C;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 Figtree,system-ui,sans-serif}
+h1,h2,h3{font-family:Sora,Figtree,sans-serif;margin:0}
+header{padding:20px 20px 8px;max-width:1100px;margin:auto}
+header h1{font-size:26px}
+header p{margin:4px 0 0;color:var(--soft)}
+nav{display:flex;gap:6px;flex-wrap:wrap;max-width:1100px;margin:12px auto 0;padding:0 20px}
+nav button{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px;border-radius:20px;font:600 14px Figtree,sans-serif;cursor:pointer}
+nav button[aria-selected="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+main{max-width:1100px;margin:auto;padding:16px 20px 60px}
+section{display:none} section.on{display:block}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.bar button,.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:7px 12px;border-radius:8px;cursor:pointer;font:500 14px Figtree}
+.btn.primary{background:var(--gold);border-color:var(--gold);color:#1F2A2B}
+input,select,textarea{font:14px Figtree;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
+.meter{flex:1;min-width:200px;height:10px;border-radius:5px;background:var(--line);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--ok)}
+/* the day spine */
+.spine{position:relative;border-left:3px solid var(--line);margin-left:62px}
+.blk{position:relative;margin:0 0 8px 14px;padding:9px 12px;border-radius:10px;background:var(--card);border:1px solid var(--line);display:flex;gap:10px;align-items:flex-start}
+.blk.fixed{background:var(--fixed)}
+.blk.done{opacity:.55} .blk.done .t{text-decoration:line-through}
+.blk .time{position:absolute;left:-78px;top:10px;width:58px;text-align:right;font-size:12px;color:var(--soft)}
+.blk::before{content:"";position:absolute;left:-22px;top:14px;width:11px;height:11px;border-radius:50%;background:var(--c,var(--soft));border:2px solid var(--paper)}
+.blk .t{font-weight:600}
+.blk .d{font-size:13px;color:var(--soft)}
+.blk input[type=checkbox]{width:18px;height:18px;margin-top:3px;accent-color:var(--ok)}
+.now{position:absolute;left:-8px;right:0;height:2px;background:var(--gold)}
+.tag{font-size:11px;padding:1px 7px;border-radius:10px;color:#fff;background:var(--c);margin-left:6px;vertical-align:1px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+.day{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px}
+.day.today{border:2px solid var(--gold)}
+.day h3{font-size:14px;margin-bottom:6px}
+.day li{font-size:13px;margin:3px 0}
+.day ul{padding-left:16px;margin:4px 0}
+.theme{font-size:12px;color:var(--soft);margin-bottom:4px}
+.feat{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--c);border-radius:10px;padding:12px;margin-bottom:12px}
+.stages{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0}
+.stages button{font-size:12px;padding:4px 8px;border-radius:12px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.stages button.hit{background:var(--ok);color:#fff;border-color:var(--ok)}
+.stages button.cur{background:var(--gold);color:#1F2A2B;border-color:var(--gold)}
+.stale{color:var(--warn);font-weight:600}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+ul.check{list-style:none;padding:0}
+ul.check li{padding:6px 0;border-bottom:1px solid var(--line);display:flex;gap:8px}
+.note{font-size:13px;color:var(--soft)}
+textarea{width:100%;min-height:60px}
+.x{border:none;background:none;color:var(--warn);cursor:pointer;font-size:13px}
+@media (max-width:560px){.spine{margin-left:52px}.blk .time{left:-68px;width:48px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Delivery planner</h1>
+  <p id="sub">QDC and Knotting Matters, one predictable week at a time.</p>
+</header>
+<nav role="tablist">
+  <button data-tab="today" aria-selected="true">Today</button>
+  <button data-tab="week">Two weeks</button>
+  <button data-tab="features">Feature pipeline</button>
+  <button data-tab="cadence">Cadence & bases</button>
+  <button data-tab="inbox">Quick capture</button>
+  <button data-tab="extras">Extras</button>
+  <button id="themeBtn" title="Switch theme">Theme</button>
+</nav>
+<main>
+
+<section id="today" class="on">
+  <div class="bar">
+    <button id="prevDay">◀</button>
+    <strong id="dayLabel"></strong>
+    <button id="nextDay">▶</button>
+    <button id="goToday">Today</button>
+    <div class="meter" title="Blocks done"><i id="meterFill"></i></div>
+    <span id="meterTxt" class="note"></span>
+  </div>
+  <p class="note" id="dayTheme"></p>
+  <div class="spine" id="spine"></div>
+  <h3 style="margin-top:18px">Pulled into today</h3>
+  <ul class="check" id="dayExtras"></ul>
+</section>
+
+<section id="week">
+  <div class="bar">
+    <button id="prevWk">◀ Earlier</button><button id="nextWk">Later ▶</button>
+    <span class="note">Fixed meetings, the day's theme, and anything you've pulled in.</span>
+  </div>
+  <div class="grid" id="weekGrid"></div>
+  <p class="note" id="capNote"></p>
+</section>
+
+<section id="features">
+  <div class="bar">
+    <input id="fName" placeholder="Feature or page name">
+    <select id="fClient"><option>QDC</option><option>KM</option></select>
+    <button class="btn primary" id="addFeat">Add feature</button>
+  </div>
+  <p class="note">Tap the stage it has reached. Anything untouched for 5+ days is flagged, so on-hold work doesn't lose its context. Write the "resume note" before you park it.</p>
+  <div id="featList"></div>
+</section>
+
+<section id="cadence">
+  <h2 style="font-size:18px">Recurring obligations</h2>
+  <ul class="check" id="cadList"></ul>
+  <h2 style="font-size:18px;margin-top:20px">Bases people often miss</h2>
+  <ul class="check" id="baseList"></ul>
+</section>
+
+<section id="inbox">
+  <div class="bar">
+    <input id="iText" placeholder="Something came up…" style="flex:1;min-width:200px">
+    <select id="iClient"><option>QDC</option><option>KM</option><option>Internal</option></select>
+    <input id="iDate" type="date" title="Do on">
+    <button class="btn primary" id="addItem">Capture</button>
+  </div>
+  <p class="note">Impromptu client asks, dependency chases, clarification calls. Give it a date and it appears on that day.</p>
+  <ul class="check" id="inboxList"></ul>
+</section>
+
+<section id="extras">
+  <p class="note">Anything pasted in below the marker at the bottom of the file shows up here. Ask Claude for a new add-on and paste it in — nothing above the marker needs to change.</p>
+  <div id="extrasHost"></div>
+</section>
+
+</main>
+<script>
+/* ---------- CONFIG: edit these to change your week ---------- */
+const CLIENT = {QDC:'var(--qdc)', KM:'var(--km)', Internal:'var(--int)', Me:'var(--gold)'};
+
+// Weekday: 1=Mon ... 5=Fri. Blocks run in IST.
+const BASE = [
+  ['10:00','10:30','Start-up','Slack, WhatsApp, email, Linear notifications. Pick today\'s top 3.','Me'],
+  ['10:30','11:40','Focus block A','Deepest work: requirement study, Linear build, or verification.','Me'],
+  ['11:45','12:15','QDC client standup','Note blockers and client dependencies as you hear them.','QDC',true],
+  ['12:15','12:30','Log actions','Turn standup notes into tickets or messages right away.','QDC'],
+  ['12:30','13:15','Team sync / standup','','Internal',true],
+  ['13:15','14:00','Lunch','Away from the screen.','Me'],
+  ['14:00','15:30','Focus block B','UI review of in-progress work, PM QA, staging checks.','Me'],
+  ['15:30','15:45','Break','','Me'],
+  ['15:45','16:45','Coordination','Chase owners, client dependencies, route questions.','Me'],
+  ['16:45','17:30','Flex slot','Feature walkthrough call, client clarification, or overflow.','Me'],
+  ['17:30','18:00','Evening slot','','Me'],
+  ['18:00','18:30','Shutdown','Timesheet, tomorrow\'s top 3, close loops.','Me'],
+];
+const DAYS = {
+  1:{theme:'Plan the week',
+     over:{'Focus block A':'Weekly plan: review both boards, set this week\'s milestones, update both trackers.',
+           'Team sync / standup':'Monday Team Sync (12:30–1:15)',
+           'Evening slot':'Alternate-day update to Gunjan (Slack) + meeting notes out.'}},
+  2:{theme:'Review & verify',
+     over:{'Focus block A':'Verify Linear projects line by line against the requirement doc.',
+           'Team sync / standup':'Team standup (confirm whether Tue has one)',
+           'Evening slot':'Della Updates with Gunjan (5:30–6). Bring the one-page status sheet.'},
+     extra:[['17:00','17:30','Prep Della Updates','Deliverable, state, blocker, owner, dates chased.','Internal']]},
+  3:{theme:'Demo & client day',
+     over:{'Focus block A':'Demo prep: script, run-through, staging vs Figma check (KM).',
+           'Team sync / standup':'Daily Standup (M/W/F)',
+           'Evening slot':'Alternate-day update to Gunjan + demo summary with UAT links if a demo ran.'}},
+  4:{theme:'Build & improve',
+     over:{'Focus block A':'New requirement docs: study, create Linear project, map dependencies.',
+           'Team sync / standup':'Thursday Team Sync (12:30–1:15)',
+           'Focus block B':'Process gaps (45 min) + product/strategy notes (45 min).'}},
+  5:{theme:'Report & close the week',
+     over:{'Focus block A':'Weekly status reports for QDC and KM. Send before lunch.',
+           'Team sync / standup':'Daily Standup (M/W/F)',
+           'Evening slot':'Management & Ops (5:30–6) with Gunjan, Aditi, Ashish. Alternate-day update.'}},
+};
+
+const STAGES = ['Doc received','Studied','Linear built','Verified line by line','Dependencies mapped',
+  'Walkthrough call held','Due dates set','In build','UI reviewed','Internal QA','PM QA','Client UAT',
+  'Client sign-off','Deployed to prod','Go-live summary sent'];
+
+const CADENCE = [
+  ['Daily','Meeting notes, decisions and actions shared the same working day'],
+  ['Daily','Timesheet entry before shutdown'],
+  ['Mon/Wed/Fri','Alternate-day update to Gunjan (Slack or Linear)'],
+  ['Mon/Wed/Fri','Nudge devs to post their own updates in project channels'],
+  ['Tuesday','Prepare and attend Della Updates (5:30)'],
+  ['Friday','Weekly status report: QDC'],
+  ['Friday','Weekly status report: Knotting Matters (with Mahima)'],
+  ['Friday','Management & Ops call (5:30)'],
+  ['Per demo','Script + PM QA + staging vs Figma (KM) before the demo'],
+  ['Per demo','Summary email with UAT links after the demo'],
+  ['Per feature','Walkthrough call with the team, due dates set the same day'],
+  ['Monthly','Review delivery patterns, blockers and process improvements'],
+];
+const BASES = [
+  'Every parked feature has a resume note (why it stopped, who unblocks it, what\'s next)',
+  'Every client dependency has an owner, an ask date and a chase date',
+  'Scope additions go through change control, not quiet acceptance',
+  'No dates, scope or pricing promised to a client without escalating first',
+  'Tickets for UI/design decisions routed to their owner (Gunjan/Jasmita)',
+  'Things deployed to staging are actually checked, not just marked done',
+  'Go-live has a named date, a named deployer and a rollback contact',
+  'Contact list current (e.g. bounced addresses, people who have left)',
+  'Risks escalated within one working day of becoming known',
+  'Two hours of genuine focus protected each day',
+];
+
+/* ---------- storage ---------- */
+const KEY='della-planner-v1';
+let S={done:{},feats:[],items:[],cad:{},bases:{},custom:{}};
+try{const r=localStorage.getItem(KEY); if(r) S=Object.assign(S,JSON.parse(r));}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const toMin=t=>{const [h,m]=t.split(':').map(Number);return h*60+m};
+const nice=d=>d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'short'});
+const days=(a,b)=>Math.floor((a-b)/864e5);
+let cur=new Date(); cur.setHours(0,0,0,0);
+let wkOff=0;
+
+function blocksFor(d){
+  const wd=d.getDay(); const cfg=DAYS[wd];
+  if(!cfg) return [];
+  let list=BASE.map(b=>{
+    const o=cfg.over[b[2]];
+    return {s:b[0],e:b[1],t:o&&b[2]==='Team sync / standup'?o:b[2],d:o&&b[2]!=='Team sync / standup'?o:b[3],c:b[4],fixed:!!b[5]||(b[2]==='Evening slot'&&/\(5:30/.test(o||''))};
+  });
+  (cfg.extra||[]).forEach(x=>list.push({s:x[0],e:x[1],t:x[2],d:x[3],c:x[4]}));
+  if(wd!==2&&wd!==5) list=list.map(b=>b.t==='Evening slot'&&!cfg.over['Evening slot']?Object.assign(b,{d:'Updates, notes and loose ends.'}):b);
+  return list.sort((a,b)=>toMin(a.s)-toMin(b.s));
+}
+
+/* ---------- Today ---------- */
+function renderToday(){
+  const k=iso(cur), bl=blocksFor(cur), sp=$('#spine');
+  $('#dayLabel').textContent=nice(cur);
+  const cfg=DAYS[cur.getDay()];
+  $('#dayTheme').textContent=cfg?'Theme: '+cfg.theme:'Weekend. Nothing planned, on purpose.';
+  sp.innerHTML='';
+  const dn=S.done[k]||{};
+  bl.forEach((b,i)=>{
+    const id=b.s+b.t, el=document.createElement('div');
+    el.className='blk'+(b.fixed?' fixed':'')+(dn[id]?' done':'');
+    el.style.setProperty('--c',CLIENT[b.c]);
+    el.innerHTML=`<span class="time">${b.s}</span><input type="checkbox" ${dn[id]?'checked':''} aria-label="Mark ${b.t} done">
+      <div><div class="t">${b.t}${b.c!=='Me'?`<span class="tag" style="--c:${CLIENT[b.c]}">${b.c}</span>`:''}</div><div class="d">${b.s}–${b.e}${b.d?' · '+b.d:''}</div></div>`;
+    el.querySelector('input').onchange=e=>{S.done[k]=S.done[k]||{};S.done[k][id]=e.target.checked;save();renderToday();};
+    sp.appendChild(el);
+  });
+  const n=bl.length, c=bl.filter(b=>dn[b.s+b.t]).length;
+  $('#meterFill').style.width=n?(c/n*100)+'%':'0';
+  $('#meterTxt').textContent=n?`${c}/${n} blocks`:'';
+  // now line
+  const now=new Date();
+  if(iso(now)===k&&bl.length){
+    const m=now.getHours()*60+now.getMinutes();
+    const idx=bl.findIndex(b=>toMin(b.s)>m);
+    const line=document.createElement('div'); line.className='now';
+    const target=idx<0?null:sp.children[idx];
+    if(target) sp.insertBefore(line,target); else sp.appendChild(line);
+  }
+  const ul=$('#dayExtras'); ul.innerHTML='';
+  const its=S.items.filter(i=>i.date===k);
+  if(!its.length) ul.innerHTML='<li class="note">Nothing captured for this day. Use Quick capture to add impromptu work.</li>';
+  its.forEach(i=>ul.appendChild(itemRow(i)));
+}
+
+/* ---------- Two weeks ---------- */
+function renderWeek(){
+  const g=$('#weekGrid'); g.innerHTML='';
+  const start=new Date(); start.setHours(0,0,0,0);
+  start.setDate(start.getDate()-((start.getDay()+6)%7)+wkOff*7);
+  let focus=0, ad=0;
+  for(let i=0;i<14;i++){
+    const d=new Date(start); d.setDate(start.getDate()+i);
+    if(d.getDay()===0||d.getDay()===6) continue;
+    const bl=blocksFor(d), k=iso(d), its=S.items.filter(x=>x.date===k);
+    focus+=bl.filter(b=>/Focus/.test(b.t)).length; ad+=its.length;
+    const el=document.createElement('div');
+    el.className='day'+(k===iso(new Date())?' today':'');
+    el.innerHTML=`<h3>${d.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'})}</h3>
+      <div class="theme">${DAYS[d.getDay()].theme}</div>
+      <ul>${bl.filter(b=>b.fixed).map(b=>`<li>${b.s} ${b.t}</li>`).join('')}</ul>
+      ${its.length?`<strong style="font-size:12px">Pulled in</strong><ul>${its.map(x=>`<li>${x.done?'✓ ':''}${x.text}</li>`).join('')}</ul>`:''}`;
+    el.style.cursor='pointer';
+    el.onclick=()=>{cur=d;show('today');};
+    g.appendChild(el);
+  }
+  $('#capNote').textContent=`${focus} focus blocks across these two weeks (about ${Math.round(focus*1.3)} hours). ${ad} captured items. If captured items pass roughly one per focus block, something needs to move or be escalated.`;
+}
+
+/* ---------- Features ---------- */
+function renderFeats(){
+  const L=$('#featList'); L.innerHTML='';
+  if(!S.feats.length) L.innerHTML='<p class="note">No features yet. Add the ones currently in flight for QDC and KM.</p>';
+  S.feats.forEach((f,fi)=>{
+    const age=days(Date.now(),f.touched), stale=age>=5&&f.stage<STAGES.length-1;
+    const el=document.createElement('div'); el.className='feat';
+    el.style.setProperty('--c',CLIENT[f.client]);
+    el.innerHTML=`<div class="row"><strong>${f.name}</strong><span class="tag" style="--c:${CLIENT[f.client]}">${f.client}</span>
+      <span class="note">Next: ${STAGES[f.stage+1]||'Done'}</span>
+      <span class="${stale?'stale':'note'}">${stale?`Untouched ${age} days`:`Touched ${age}d ago`}</span>
+      <label class="note"><input type="checkbox" ${f.hold?'checked':''}> On hold</label>
+      <button class="x">Remove</button></div>
+      <div class="stages">${STAGES.map((s,i)=>`<button class="${i<f.stage?'hit':i===f.stage?'cur':''}" data-i="${i}">${s}</button>`).join('')}</div>
+      <div class="row"><input type="date" value="${f.due||''}" title="Target go-live"> <span class="note">target go-live</span></div>
+      <textarea placeholder="Resume note: why it's paused, who unblocks it, the next exact step">${f.note||''}</textarea>`;
+    el.querySelectorAll('.stages button').forEach(b=>b.onclick=()=>{f.stage=+b.dataset.i;f.touched=Date.now();save();renderFeats();});
+    el.querySelector('input[type=checkbox]').onchange=e=>{f.hold=e.target.checked;f.touched=Date.now();save();renderFeats();};
+    el.querySelector('input[type=date]').onchange=e=>{f.due=e.target.value;save();};
+    el.querySelector('textarea').onchange=e=>{f.note=e.target.value;f.touched=Date.now();save();};
+    el.querySelector('.x').onclick=()=>{if(confirm('Remove '+f.name+'?')){S.feats.splice(fi,1);save();renderFeats();}};
+    L.appendChild(el);
+  });
+}
+$('#addFeat').onclick=()=>{const n=$('#fName').value.trim(); if(!n) return;
+  S.feats.push({name:n,client:$('#fClient').value,stage:0,touched:Date.now()}); $('#fName').value=''; save(); renderFeats();};
+
+/* ---------- Cadence ---------- */
+function weekKey(){const d=new Date();d.setDate(d.getDate()-((d.getDay()+6)%7));return iso(d);}
+function renderCad(){
+  const wk=weekKey(), c=S.cad[wk]||{}, ul=$('#cadList'); ul.innerHTML='';
+  CADENCE.forEach(([when,what],i)=>{
+    const li=document.createElement('li');
+    li.innerHTML=`<input type="checkbox" ${c[i]?'checked':''}><span><strong>${when}</strong> · ${what}</span>`;
+    li.querySelector('input').onchange=e=>{S.cad[wk]=S.cad[wk]||{};S.cad[wk][i]=e.target.checked;save();};
+    ul.appendChild(li);
+  });
+  const b=$('#baseList'); b.innerHTML='';
+  BASES.forEach((t,i)=>{
+    const li=document.createElement('li');
+    li.innerHTML=`<input type="checkbox" ${(S.bases[wk]||{})[i]?'checked':''}><span>${t}</span>`;
+    li.querySelector('input').onchange=e=>{S.bases[wk]=S.bases[wk]||{};S.bases[wk][i]=e.target.checked;save();};
+    b.appendChild(li);
+  });
+}
+
+/* ---------- Inbox ---------- */
+function itemRow(it){
+  const li=document.createElement('li');
+  li.innerHTML=`<input type="checkbox" ${it.done?'checked':''}><span style="flex:1">${it.text} <span class="tag" style="--c:${CLIENT[it.client]}">${it.client}</span> <span class="note">${it.date||'no date'}</span></span><button class="x">Delete</button>`;
+  li.querySelector('input').onchange=e=>{it.done=e.target.checked;save();renderAll();};
+  li.querySelector('.x').onclick=()=>{S.items=S.items.filter(x=>x!==it);save();renderAll();};
+  return li;
+}
+function renderInbox(){
+  const ul=$('#inboxList'); ul.innerHTML='';
+  const open=S.items.filter(i=>!i.done).sort((a,b)=>(a.date||'9')<(b.date||'9')?-1:1);
+  if(!open.length) ul.innerHTML='<li class="note">Nothing open. Capture things the moment they come up.</li>';
+  open.forEach(i=>ul.appendChild(itemRow(i)));
+}
+$('#iDate').value=iso(new Date());
+$('#addItem').onclick=()=>{const t=$('#iText').value.trim(); if(!t) return;
+  S.items.push({text:t,client:$('#iClient').value,date:$('#iDate').value,done:false}); $('#iText').value=''; save(); renderAll();};
+
+/* ---------- extension API for pasted-in add-ons ---------- */
+window.Planner = {
+  state: S,
+  save: save,
+  widgets: [],
+  registerWidget(id, title, render){
+    if(this.widgets.some(w=>w.id===id)){ this.widgets=this.widgets.filter(w=>w.id!==id); }
+    this.widgets.push({id,title,render});
+    renderExtras();
+  }
+};
+function renderExtras(){
+  const host=$('#extrasHost'); if(!host) return;
+  host.innerHTML='';
+  if(!Planner.widgets.length){ host.innerHTML='<p class="note">No add-ons pasted in yet.</p>'; return; }
+  Planner.widgets.forEach(w=>{
+    const card=document.createElement('div');
+    card.className='feat'; card.style.setProperty('--c','var(--gold)');
+    const h=document.createElement('h3'); h.style.marginBottom='8px'; h.style.fontSize='15px'; h.textContent=w.title;
+    const body=document.createElement('div');
+    card.appendChild(h); card.appendChild(body); host.appendChild(card);
+    try{ w.render(body); }catch(e){ body.innerHTML='<p class="stale">This add-on hit an error: '+e.message+'</p>'; }
+  });
+}
+
+/* ---------- nav ---------- */
+function show(tab){
+  document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id===tab));
+  document.querySelectorAll('nav [data-tab]').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===tab));
+  renderAll();
+}
+document.querySelectorAll('nav [data-tab]').forEach(b=>b.onclick=()=>show(b.dataset.tab));
+$('#prevDay').onclick=()=>{cur.setDate(cur.getDate()-1);renderToday();};
+$('#nextDay').onclick=()=>{cur.setDate(cur.getDate()+1);renderToday();};
+$('#goToday').onclick=()=>{cur=new Date();cur.setHours(0,0,0,0);renderToday();};
+$('#prevWk').onclick=()=>{wkOff-=2;renderWeek();};
+$('#nextWk').onclick=()=>{wkOff+=2;renderWeek();};
+$('#themeBtn').onclick=()=>{const r=document.documentElement;
+  const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;
+  r.dataset.theme=dark?'light':'dark';};
+function renderAll(){renderToday();renderWeek();renderFeats();renderCad();renderInbox();renderExtras();}
+renderAll();
+setInterval(renderToday,5*60*1000);
+</script>
+
+<!-- ============================================================
+     PASTE NEW ADD-ONS BELOW THIS LINE.
+     Ask Claude for one and paste the whole <script> block it gives
+     you, right above the closing marker. Never edit anything above
+     this comment — everything here is independent of it.
+     Each add-on ends with Planner.registerWidget(id, title, fn)
+     and appears as its own card on the Extras tab.
+     ============================================================ -->
+
+<script>
+/* EXAMPLE ADD-ON — client contacts list. Keep it, edit it, or
+   delete this whole <script> block if you don't want it. */
+Planner.registerWidget('contacts', 'Client contacts', function(el){
+  const st = Planner.state;
+  st.custom.contacts = st.custom.contacts || [];
+  function draw(){
+    el.innerHTML = `<div class="row">
+      <input id="cN" placeholder="Name">
+      <input id="cR" placeholder="Role">
+      <input id="cE" placeholder="Email">
+      <select id="cC"><option>QDC</option><option>KM</option><option>Internal</option></select>
+      <button class="btn primary" id="cAdd">Add</button>
+    </div><ul class="check" id="cList"></ul>`;
+    const list = el.querySelector('#cList');
+    if(!st.custom.contacts.length) list.innerHTML = '<li class="note">No contacts yet.</li>';
+    st.custom.contacts.forEach((c,i)=>{
+      const li = document.createElement('li');
+      li.innerHTML = `<span style="flex:1">${c.name} — ${c.role}
+        <span class="tag" style="--c:var(--gold)">${c.client}</span>
+        <span class="note">${c.email||''}</span></span>
+        <button class="x">Delete</button>`;
+      li.querySelector('.x').onclick = ()=>{ st.custom.contacts.splice(i,1); Planner.save(); draw(); };
+      list.appendChild(li);
+    });
+    el.querySelector('#cAdd').onclick = ()=>{
+      const n = el.querySelector('#cN').value.trim();
+      if(!n) return;
+      st.custom.contacts.push({
+        name:n,
+        role:el.querySelector('#cR').value,
+        email:el.querySelector('#cE').value,
+        client:el.querySelector('#cC').value
+      });
+      Planner.save(); draw();
+    };
+  }
+  draw();
+});
+</script>
+
+<!-- ============================================================
+     PASTE NEW ADD-ONS ABOVE THIS LINE.
+     ============================================================ -->
+</body>
+</html>
